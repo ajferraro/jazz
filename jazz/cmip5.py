@@ -196,21 +196,15 @@ def fetch(location, constraint=None):
     cubes = cubes.extract(iris.Constraint(cube_func=lambda cube: 
                                           cube.var_name == var_name))
 
-    cubes = check_for_timepoint_duplicates(cubes)
-    cubes = cubes.merge()
-
     if os.path.isfile(location):
         cube = cubes[0]
     else:
         clean_cubelist_atts(cubes)
-        if ((len(cubes) > 1) and (cubes[0].coord('time').units != 
-                                  cubes[1].coord('time').units)):
-            warnings.warn('Cubes not contiguous in time', Warning)
-            iris.util.unify_time_units(cubes) # NEW
-            from iris.experimental.equalise_cubes import equalise_attributes
-            equalise_attributes(cubes)
+        iris.util.unify_time_units(cubes) # NEW
+        from iris.experimental.equalise_cubes import equalise_attributes
+        equalise_attributes(cubes)
         try:
-            cube = cubes.concatenate_cube()
+            cube = cubes.concatenate().merge_cube()
         except:
             # If concatenation fails, try the manual approach - forming a new
             # cube.
