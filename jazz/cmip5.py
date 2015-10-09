@@ -138,7 +138,7 @@ def clean_cubelist_atts(cubelist):
         cube.attributes = common_attributes
 
 
-def add_realization_number(cube, field, fname):
+def add_realization_number(cube):
     realization_number = cube.attributes['realization']
     initialization_method = cube.attributes['initialization_method']
     physics_version = cube.attributes['physics_version']
