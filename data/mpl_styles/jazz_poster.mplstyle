@@ -1,0 +1,51 @@
+
+# Switch default colour map from jet to cubehelix
+image.cmap : cubehelix
+
+# Make the ticks off-black rather than black
+ytick.color : .15
+xtick.color : .15
+# Distance between ticks and labels
+xtick.major.pad : 10.0
+ytick.major.pad : 10.0
+ytick.major.width : 0.5
+ytick.minor.width : 0.5
+xtick.labelsize : 16.
+ytick.labelsize : 16.
+xtick.major.width : 1.25
+ytick.major.width : 1.25
+
+patch.facecolor : 4c72b0
+patch.linewidth : 0.48
+
+axes.linewidth : 1.25
+axes.labelcolor : .15
+axes.edgecolor : .15
+axes.facecolor : white
+axes.color_cycle : 4c72b0, 55a868, c44e52, 8172b2, ccb974, 64b5cd
+axes.axisbelow : True
+axes.titlesize : 19.2
+axes.labelsize : 17.6
+
+lines.linewidth : 12.5
+lines.solid_capstyle : round
+lines.markersize : 11.2
+lines.markeredgewidth : 0.0
+
+# Number of scatter points on legend only needs to be one really
+legend.scatterpoints : 1
+legend.numpoints : 1
+# Turn off legend frame
+legend.frameon : False
+legend.fontsize : 16.
+
+text.color : .15
+
+grid.color : .8
+grid.linewidth: 1.6
+
+font.sans-serif : Arial, Liberation Sans, Bitstream Vera Sans, sans-serif
+
+figure.figsize : 12.8, 8.8
+
+backend : Qt4Agg
