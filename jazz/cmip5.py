@@ -140,15 +140,8 @@ def clean_cubelist_atts(cubelist):
 
 def add_realization_number(cube):
     realization_number = cube.attributes['realization']
-    initialization_method = cube.attributes['initialization_method']
-    physics_version = cube.attributes['physics_version']
     cube.add_aux_coord(iris.coords.AuxCoord(np.int32(realization_number), 
                                             'realization'))
-    cube.add_aux_coord(iris.coords.AuxCoord(np.int32(initialization_method), 
-                                            'initialization_method'))
-    cube.add_aux_coord(iris.coords.AuxCoord(np.int32(physics_version), 
-                                            'physics_version'))
-
 
 def clean(cube, field, fname):
     guess_bounds(cube)
