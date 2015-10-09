@@ -204,6 +204,7 @@ def fetch(location, constraint=None):
                                           cube.var_name == var_name))
 
     cubes = check_for_timepoint_duplicates(cubes)
+    cubes = cubes.merge()
 
     if os.path.isfile(location):
         cube = cubes[0]
