@@ -7,7 +7,7 @@ import iris
 import cmip5
 
 
-def anomalies(cube, frac=False):
+def anomalies(cube, frac=False, clim=None):
     """Calculate anomalies from a monthly climatology.  Can handle non-January
     start months and cubes of varying dimensions, as long as the time
     dimension is first.
@@ -16,6 +16,9 @@ def anomalies(cube, frac=False):
         cube (iris.Cube): cube from which to calculate anomalies.
         frac (bool, optional): whether to calculate anomalies as %
             deviations from the climatology
+        climatology: placeholder for the climatology data - if this is passed
+            as a numpy array it can be used as an extra optional output
+
     Returns
         iris.Cube
 
@@ -45,6 +48,9 @@ def anomalies(cube, frac=False):
     if frac == True:
         anom_cube = 100*(anom_cube/cube.collapsed('time', iris.analysis.MEAN))
     
+    if clim is not None:
+        clim[:] = climatology[0:12]
+
     return anom_cube
 
 
