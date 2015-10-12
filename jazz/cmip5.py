@@ -204,7 +204,13 @@ def fetch(location, constraint=None):
         from iris.experimental.equalise_cubes import equalise_attributes
         equalise_attributes(cubes)
         try:
-            cube = cubes.concatenate().merge_cube()
+            cubes = cubes.concatenate()
+            realizations = [cube.coord('realization').points[0]
+                            for cube in cubes]
+            if len(set(realizations)) != 1:
+                cubes = iris.cube.CubeList(utils.make_common_in_time(cubes))
+        
+            cube = cubes.merge_cube()             
         except:
             # If concatenation fails, try the manual approach - forming a new
             # cube.
