@@ -208,7 +208,7 @@ def fetch(location, constraint=None):
             realizations = [cube.coord('realization').points[0]
                             for cube in cubes]
             if len(set(realizations)) != 1:
-                cubes = iris.cube.CubeList(utils.make_common_in_time(cubes))
+                cubes = iris.cube.CubeList(utils.make_common_in_time(*cubes))
         
             cube = cubes.merge_cube()             
         except:
