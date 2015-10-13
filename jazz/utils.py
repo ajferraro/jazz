@@ -293,3 +293,27 @@ def write_file(data, filename):
     with open(filename, 'w') as file:
         for line in data:
             file.write('{}\n'.format(line))
+
+
+def spatial_constraint(lat=[-90, 90], lon=[0, 360], inc_equal=True):
+    """Make a cube constraint in latitude and/or longitude.
+
+    Args:
+        lat (Optional[list]): latitude bounds
+        lon (Optional[list]): longitude bounds
+        inc_equal (bool): include those points where the latitude or 
+            longitude is equal to the bounds
+
+    Returns:
+        iris.Constraint
+
+    """
+    if inc_equal:
+        lat_func = lambda l: lat[0] <= l <= lat[1]
+        lon_func = lambda l: lon[0] <= l <= lon[1]
+    else:
+        lat_func = lambda l: lat[0] < l < lat[1]
+        lon_func = lambda l: lon[0] < l < lon[1]
+
+    return iris.Constraint(coord_values={'latitude': lat_func,
+                                         'longitude': lon_func})
