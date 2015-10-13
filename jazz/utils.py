@@ -71,6 +71,17 @@ def area_mean(*args):
     return ret
 
 
+def time_mean(*args):
+    """Calculate the time average of iris CUbes"""
+    ret = []
+    for cube in args:
+        ret.append(cube.collapsed('time', iris.analysis.MEAN))
+
+    if len(ret) == 1:
+        ret = ret[0]
+    return ret
+
+
 def area_weighted(cube):
     """Weight a cube by latitude."""
     grid_areas = iris.analysis.cartography.area_weights(cube)
