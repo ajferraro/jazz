@@ -162,16 +162,19 @@ def check_for_timepoint_duplicates(cubes):
         cubes (list or iris.cube.CubeList)
 
     """
-    for i in xrange(len(cubes)-1):
-        dates1 = utils.make_datetimes(cubes[i])
-        dates2 = utils.make_datetimes(cubes[i+1])
+    new_cubes = iris.cube.CubeList()
+    new_cubes.append(cubes[0])
+
+    # For each cube, append that part of it which doesn't overlap in time
+    # with the final cube in the new cube list
+    for cube in cubes:
+        dates1 = utils.make_datetimes(new_cubes[-1])
+        dates2 = utils.make_datetimes(cube)
         non_overlap = np.where(dates2 > dates1[-1])
         if len(non_overlap[0]) != 0:
-            cubes[i+1] = cubes[i+1][non_overlap]
-        else:
-            # If all overlapping just remove one of the paired cubes
-            cubes.remove(cubes[i+1])
-    return cubes
+            new_cubes.append(cube[non_overlap])
+
+    return new_cubes
 
 
 def check_realizations_timepoint_duplicates(cubes):
@@ -180,6 +183,7 @@ def check_realizations_timepoint_duplicates(cubes):
     # Deal with duplicated data
     realizations = set([cube.coord('realization').points[0] for cube in cubes])
     for realization in realizations:
+        print realization
         constraint = iris.Constraint(coord_values={'realization':
                                                    lambda r: r == realization})
         cubes_realization = cubes.extract(constraint)
