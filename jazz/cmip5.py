@@ -266,7 +266,7 @@ def available_models(experiments, variables, frequencies, realms,
                                  realms, cmor_tables)
     for experiment, variable, frequency, realm, cmor_table in iterator:
         files = availability('*', experiment, frequency, realm, cmor_table,
-                             'r1i1p1', v)
+                             'r1i1p1', variable)
         models.append([f.split('/')[7] for f in files])
     
     # Get the common models in the lists of lists
