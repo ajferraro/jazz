@@ -2,6 +2,7 @@
 Module for handling CMIP5 files
 """
 import glob
+import itertools
 import numpy as np
 import os
 import warnings
@@ -244,16 +245,16 @@ def fetch(location, constraint=None):
 
 
 
-def available_models(experiments, variables, frequency, realm, cmor_table,
-                     outfile=None):
+def available_models(experiments, variables, frequencies, realms,
+                     cmor_tables, outfile=None):
     """Get a list of models with the required data.
 
     Args:
         experiments (list): list of experiments required
         variables (list): list of variables required
-        frequency (str): time frequency
-        realm (str): CMIP5 realm
-        cmor_table (str): CMOR table
+        frequencies (list): list of time frequency
+        realms (list): CMIP5 realm
+        cmor_tables (list): CMOR table
         outfile (Optional[str]): full file path to optionally write out data
        
     Returns:
@@ -261,11 +262,12 @@ def available_models(experiments, variables, frequency, realm, cmor_table,
 
     """
     models = []
-    for experiment in experiments:
-        for variable in variables:
-            files = availability('*', experiment, frequency, realm,
-                                       cmor_table, 'r1i1p1', variable)
-            models.append([f.split('/')[7] for f in files])
+    iterator = itertools.product(experiments, variables, frequencies,
+                                 realms, cmor_tables)
+    for experiment, variable, frequency, realm, cmor_table in iterator:
+        files = availability('*', experiment, frequency, realm, cmor_table,
+                             'r1i1p1', v)
+        models.append([f.split('/')[7] for f in files])
     
     # Get the common models in the lists of lists
     result = set(models[0])
