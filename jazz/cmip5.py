@@ -176,6 +176,20 @@ def check_for_timepoint_duplicates(cubes):
     return cubes
 
 
+def check_realizations_timepoint_duplicates(cubes):
+
+    new_cubes = iris.cube.CubeList()
+    # Deal with duplicated data
+    realizations = set([cube.coord('realization').points[0] for cube in cubes])
+    for realization in realization:
+        constraint = iris.Constraint(coord_values={'realization':
+                                                   lambda r: r == realization})
+        cubes_realization = cubes.extract(constraint)
+        new_cubes.append(check_for_timepoint_duplicates(cubes_realization))
+
+    return new_cubes
+
+
 def fetch(location, constraint=None):
     """Fetch data from a netCDF or a directory containing netCDFs using iris.
     A common cause of concatenate errors is when the time data aren't
@@ -204,6 +218,7 @@ def fetch(location, constraint=None):
         iris.util.unify_time_units(cubes) # NEW
         from iris.experimental.equalise_cubes import equalise_attributes
         equalise_attributes(cubes)
+        cubes = check_realizations_timepoint_duplicates(cubes)        
         try:
             cubes = cubes.concatenate()
             realizations = [cube.coord('realization').points[0]
