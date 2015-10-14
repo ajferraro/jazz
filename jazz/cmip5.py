@@ -17,7 +17,7 @@ import utils
 def path(model, experiment, time_frequency, realm, cmor_table, ensemble,
          variable):
     """Return wild-card path for CMIP5 files.
-    
+
     Args:
         experiment (str): CMOR experiment ID
         model (str): CMOR model ID
@@ -28,18 +28,18 @@ def path(model, experiment, time_frequency, realm, cmor_table, ensemble,
         str
 
     """
-    geomip_experiments = ['G1', 'G1oceanAlbedo', 'G2', 'G3', 'G3S', 'G4', 
+    geomip_experiments = ['G1', 'G1oceanAlbedo', 'G2', 'G3', 'G3S', 'G4',
                           'G4cdnc', 'G4seaSalt']
     if experiment in geomip_experiments:
         cmip5_dir = '/badc/cmip5/data/GeoMIP/output1/'
     else:
         cmip5_dir = '/badc/cmip5/data/cmip5/output1/'
 
-    from names import institutes 
+    from names import institutes
     institute = institutes[model]
 
-    path = os.path.join(cmip5_dir, institute, model, experiment, 
-                        time_frequency, realm, cmor_table, ensemble, 'latest', 
+    path = os.path.join(cmip5_dir, institute, model, experiment,
+                        time_frequency, realm, cmor_table, ensemble, 'latest',
                         variable, '*')
     return path
 
@@ -98,10 +98,10 @@ def get_orog(model):
     except:
         try:
             orog = fetch(path(coupled_model, 'piControl', 'fx', 'atmos', 'fx',
-                              'r0i0p0', 'orog')) 
+                              'r0i0p0', 'orog'))
         except:
             orog = fetch(path(model, 'amip', 'fx', 'atmos', 'fx',
-                              'r0i0p0', 'orog')) 
+                              'r0i0p0', 'orog'))
     return orog
 
 
@@ -113,15 +113,13 @@ def availability(model, experiment, time_frequency, realm, cmor_table,
                                    cmor_table, ensemble, variable)))
 
 
-
-
 def common_dict(dict_list):
     """Take a list of dictionaries and delete any keys which have different
     values in the list.
     """
     for compdict in dict_list:
 
-        # Some cubes have the comment attribute, but most don't. Best to 
+        # Some cubes have the comment attribute, but most don't. Best to
         # just get rid of it
         if 'comment' in compdict:
             del compdict['comment']
@@ -131,7 +129,7 @@ def common_dict(dict_list):
 
 
 def clean_cubelist_atts(cubelist):
-    """Wrapper for common_dict - modifies the attributes of a list of 
+    """Wrapper for common_dict - modifies the attributes of a list of
     dictionaries to ensure error-free concatenation."""
     attributes = [cube.attributes for cube in cubelist]
     common_attributes = common_dict(attributes)
@@ -141,7 +139,7 @@ def clean_cubelist_atts(cubelist):
 
 def add_realization_number(cube):
     realization_number = cube.attributes['realization']
-    cube.add_aux_coord(iris.coords.AuxCoord(np.int32(realization_number), 
+    cube.add_aux_coord(iris.coords.AuxCoord(np.int32(realization_number),
                                             'realization'))
 
 def clean(cube, field, fname):
@@ -157,7 +155,7 @@ def guess_bounds(cube):
 
 
 def check_for_timepoint_duplicates(cubes):
-    """Remove duplicated time points from a list of cubes so they can 
+    """Remove duplicated time points from a list of cubes so they can
     be concatenated.
 
     Args:
@@ -185,7 +183,7 @@ def check_realizations_timepoint_duplicates(cubes):
         constraint = iris.Constraint(coord_values={'realization':
                                                    lambda r: r == realization})
         cubes_realization = cubes.extract(constraint)
-        new_cubes.append(check_for_timepoint_duplicates(cubes_realization))
+        new_cubes.extend(check_for_timepoint_duplicates(cubes_realization))
 
     return new_cubes
 
@@ -196,7 +194,7 @@ def fetch(location, constraint=None):
     contiguous. This is checked for and corrected.
 
     Args:
-        location (str): path to netCDF file or directory 
+        location (str): path to netCDF file or directory
         constraint (iris.Constraint, optional): constraint for the cubes
 
     Returns:
@@ -208,7 +206,7 @@ def fetch(location, constraint=None):
 
     # Extract only the data, not the ancillary cubes
     var_name = location.split('/')[-2]
-    cubes = cubes.extract(iris.Constraint(cube_func=lambda cube: 
+    cubes = cubes.extract(iris.Constraint(cube_func=lambda cube:
                                           cube.var_name == var_name))
 
     if os.path.isfile(location):
@@ -218,15 +216,15 @@ def fetch(location, constraint=None):
         iris.util.unify_time_units(cubes) # NEW
         from iris.experimental.equalise_cubes import equalise_attributes
         equalise_attributes(cubes)
-        cubes = check_realizations_timepoint_duplicates(cubes)        
+        cubes = check_realizations_timepoint_duplicates(cubes)
         try:
             cubes = cubes.concatenate()
             realizations = [cube.coord('realization').points[0]
                             for cube in cubes]
             if len(set(realizations)) != 1:
                 cubes = iris.cube.CubeList(utils.make_common_in_time(*cubes))
-        
-            cube = cubes.merge_cube()             
+
+            cube = cubes.merge_cube()
         except:
             # If concatenation fails, try the manual approach - forming a new
             # cube.
@@ -245,7 +243,7 @@ def fetch(location, constraint=None):
                                                 standard_name=cube.
                                                 coord('time').standard_name,
                                                 units=cube.coord('time').units)
-            
+
             # Make the new cube
             dim_coords_and_dims = list(enumerate(cube.dim_coords))
             dim_coords_and_dims = [item[::-1] for item in dim_coords_and_dims]
@@ -255,7 +253,7 @@ def fetch(location, constraint=None):
                                   units=cube.units,
                                   attributes=cube.attributes,
                                   dim_coords_and_dims=dim_coords_and_dims)
-        
+
     return cube
 
 
@@ -271,7 +269,7 @@ def available_models(experiments, variables, frequencies, realms,
         realms (list): CMIP5 realm
         cmor_tables (list): CMOR table
         outfile (Optional[str]): full file path to optionally write out data
-       
+
     Returns:
         set
 
@@ -283,7 +281,7 @@ def available_models(experiments, variables, frequencies, realms,
         files = availability('*', experiment, frequency, realm, cmor_table,
                              'r1i1p1', variable)
         models.append([f.split('/')[7] for f in files])
-    
+
     # Get the common models in the lists of lists
     result = set(models[0])
     for item in models[1:]:
@@ -292,7 +290,7 @@ def available_models(experiments, variables, frequencies, realms,
     # Optionally write the file
     if outfile != None:
         utils.write_file(sorted(result), outfile)
-    
+
     return sorted(result)
 
 
