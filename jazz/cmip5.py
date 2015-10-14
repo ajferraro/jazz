@@ -181,7 +181,7 @@ def check_realizations_timepoint_duplicates(cubes):
     new_cubes = iris.cube.CubeList()
     # Deal with duplicated data
     realizations = set([cube.coord('realization').points[0] for cube in cubes])
-    for realization in realization:
+    for realization in realizations:
         constraint = iris.Constraint(coord_values={'realization':
                                                    lambda r: r == realization})
         cubes_realization = cubes.extract(constraint)
