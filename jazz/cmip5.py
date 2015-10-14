@@ -183,7 +183,6 @@ def check_realizations_timepoint_duplicates(cubes):
     # Deal with duplicated data
     realizations = set([cube.coord('realization').points[0] for cube in cubes])
     for realization in realizations:
-        print realization
         constraint = iris.Constraint(coord_values={'realization':
                                                    lambda r: r == realization})
         cubes_realization = cubes.extract(constraint)
@@ -220,7 +219,9 @@ def fetch(location, constraint=None):
         iris.util.unify_time_units(cubes) # NEW
         from iris.experimental.equalise_cubes import equalise_attributes
         equalise_attributes(cubes)
-        cubes = check_realizations_timepoint_duplicates(cubes)
+        coord_names = [coord.standard_name for coord in cubes[0].coords()]
+        if 'time' in coord_names:
+            cubes = check_realizations_timepoint_duplicates(cubes)
         try:
             cubes = cubes.concatenate()
             realizations = [cube.coord('realization').points[0]
