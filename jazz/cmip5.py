@@ -150,7 +150,7 @@ def clean(cube, field, fname):
 def guess_bounds(cube):
     """Guess the bounds for the cubes coordinates if there are none."""
     for coord in cube.coords():
-        if (coord.bounds == None) and (coord.shape != (1,)):
+        if (coord.bounds is None) and (coord.shape != (1,)):
             coord.guess_bounds()
 
 
