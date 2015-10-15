@@ -9,6 +9,16 @@ import cmip5
 
 
 def climatology(cube, kind='month'):
+    """Calculate a climatology for a cube.  Can do monthly or yearly.
+
+    Args:
+        cube (iris.cube.Cube)
+        kind (Optional[str]): 'month' or 'year'
+
+    Returns:
+        iris.cube.Cube
+
+    """
     aux_coords = [aux_coord.name() for aux_coord in cube.aux_coords]
     if 'year' not in aux_coords:
         cat.add_year(cube, 'time')
@@ -17,65 +27,33 @@ def climatology(cube, kind='month'):
     return cube.aggregated_by(kind, iris.analysis.MEAN)
 
 
-def anomalies_iris(cube, kind='month'):
+def anomalies(cube, kind='month'):
+    """Calculate anomalies from a monthly or yearly climatology.
+
+    Args:
+        cube (iris.cube.Cube)
+        kind (Optional[str]): 'month' or 'year'
+
+    Returns:
+        iris.cube.Cube
+
+    """
+    # Calculate climatology
     clim = climatology(cube, kind=kind)
+
+    # Repeat the climatology in time so it can be subtracted from the cube
     ntim_clim = clim.coord('time').points.shape[0]
     ntim_cube = cube.coord('time').points.shape[0]
     nrepeats = ntim_cube/ntim_clim
     coord_name_tuple = [coord.name() for coord in clim.dim_coords]
+
+    # Find out where the time axis is
     time_axis = coord_name_tuple.index('time')
     clim_data = np.expand_dims(clim.data, time_axis)
     clim_data = np.repeat(clim_data, nrepeats,
                           axis=time_axis).reshape(cube.shape)
+
     return cube.copy(data=cube.data-clim_data)
-
-
-
-def anomalies(cube, frac=False, clim=None):
-    """Calculate anomalies from a monthly climatology.  Can handle non-January
-    start months and cubes of varying dimensions, as long as the time
-    dimension is first.
-
-    Args:
-        cube (iris.Cube): cube from which to calculate anomalies.
-        frac (bool, optional): whether to calculate anomalies as %
-            deviations from the climatology
-        climatology: placeholder for the climatology data - if this is passed
-            as a numpy array it can be used as an extra optional output
-
-    Returns
-        iris.Cube
-
-    """
-    anom_cube = cube.copy()
-    ntim = cube.shape[0]
-    n_months_in_yr = 12
-    non_time_dims = cube.data.shape[1:]
-    climatology = np.zeros((n_months_in_yr,)+non_time_dims)
-
-    # Calculate dates for the cube
-    dates = cube.coord('time').units.num2date(cube.coord('time').points)
-    months = np.array([d.month for d in dates])
-    startmonth = months[0]
-
-    # Make the climatology
-    for m in xrange(n_months_in_yr):
-        month_indices = np.where(months == m+1)
-        climatology[m] = cube[month_indices].collapsed('time',
-                                                       iris.analysis.MEAN).data
-
-    # Calculate anomalies
-    for t in xrange(ntim):
-        m = (t+startmonth)%12
-        anom_cube.data[t] = cube.data[t] - climatology[m-1]
-
-    if frac == True:
-        anom_cube = 100*(anom_cube/cube.collapsed('time', iris.analysis.MEAN))
-
-    if clim is not None:
-        clim[:] = climatology[0:12]
-
-    return anom_cube
 
 
 def detrended_anomalies(cube):
@@ -186,9 +164,34 @@ def loop_dictionary(dictionary, function, *args):
     return dictionary
 
 
+def detrend_array(data, axis=0):
+    dshape = data.shape
+    rank = len(dshape)
+    ntim = dshape[axis]
+    newdims = np.r_[axis, 0:axis, axis+1:rank]
+    newdata = np.reshape(np.transpose(data, tuple(newdims)),
+                         (ntim, np.prod(dshape, axis=0) // ntim))
+    newdata = newdata.copy()
+    time = np.arange(ntim)
+    trend_arr = np.zeros_like(newdata)
+    N = newdata.shape[1]
+    for i in xrange(newdata.shape[1]):
+        print (float(i)/N)*100
+        regresults = stats.mstats.linregress(time, newdata[:, i])
+        trend_arr[:, i] = time*regresults[0]
+
+    newdata = newdata - trend_arr
+    tdshape = np.take(dshape, newdims, 0)
+    ret = np.reshape(newdata, tuple(tdshape))
+    vals = list(range(1, rank))
+    olddims = vals[:axis] + [0] + vals[axis:]
+    ret = np.transpose(ret, tuple(olddims))
+    return ret
+
+
 def detrend(cube):
-    """Linearly detrend data in an iris cube.  The time dimension must be
-    first.
+    """Linearly detrend data in an iris cube.  Uses stats.mstats which allows
+    for masked data points.
 
     Args:
         cube (iris.Cube)
@@ -197,20 +200,10 @@ def detrend(cube):
         iris.Cube
 
     """
-    shape = cube.shape
-    # Reshape so the time dimension is followed by a single non-time dimension
-    data = cube.data.reshape(shape[0], np.prod(shape[1:]))
-    newshape = data.shape
-    time = np.arange(shape[0])
-    trendline = np.zeros_like(data)
-    for i in xrange(newshape[1]):
-        regresults = stats.mstats.linregress(time, data[:,i])
-        slope = regresults[0]
-        intercept = regresults[1]
-        trendline[:,i] = slope*time
-
-    newdata = (data-trendline).reshape(shape)
-    return cube.copy(data=newdata)
+    coord_name_tuple = [coord.name() for coord in cube.dim_coords]
+    time_axis = coord_name_tuple.index('time')
+    new_data = detrend_array(cube.data, axis=time_axis)
+    return cube.copy(data=new_data)
 
 
 def constrain_dates(daterange, *data):
