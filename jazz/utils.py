@@ -8,25 +8,6 @@ import iris.coord_categorisation as cat
 import cmip5
 
 
-def climatology(cube, kind='month'):
-    """Calculate a climatology for a cube.  Can do monthly or yearly.
-
-    Args:
-        cube (iris.cube.Cube)
-        kind (Optional[str]): 'month' or 'year'
-
-    Returns:
-        iris.cube.Cube
-
-    """
-    aux_coords = [aux_coord.name() for aux_coord in cube.aux_coords]
-    if 'year' not in aux_coords:
-        cat.add_year(cube, 'time')
-    if 'month' not in aux_coords:
-        cat.add_month(cube, 'time')
-    return cube.aggregated_by(kind, iris.analysis.MEAN)
-
-
 def anomalies(cube, kind='month'):
     """Calculate anomalies from a monthly or yearly climatology.
 
@@ -54,212 +35,6 @@ def anomalies(cube, kind='month'):
                           axis=time_axis).reshape(cube.shape)
 
     return cube.copy(data=cube.data-clim_data)
-
-
-def detrended_anomalies(cube):
-    """Shortcut function to calculate anomalies of a detrended cube."""
-    return anomalies(detrend(cube))
-
-
-def area_mean(*args):
-    """Calculate the area-weighted spatial mean of iris Cubes."""
-    ret = []
-    for cube in args:
-        grid_areas = iris.analysis.cartography.area_weights(cube)
-        ret.append(cube.collapsed(['latitude', 'longitude'],
-                                  iris.analysis.MEAN, weights=grid_areas))
-    if len(ret) == 1:
-        ret = ret[0]
-    return ret
-
-
-def time_mean(*args):
-    """Calculate the time average of iris CUbes"""
-    ret = []
-    for cube in args:
-        ret.append(cube.collapsed('time', iris.analysis.MEAN))
-
-    if len(ret) == 1:
-        ret = ret[0]
-    return ret
-
-
-def area_weighted(cube):
-    """Weight a cube by latitude."""
-    grid_areas = iris.analysis.cartography.area_weights(cube)
-    return cube * grid_areas / np.mean(grid_areas)
-
-
-def make_common_in_time(*args):
-    """Subet all cubes so they have the same time dimensions.
-
-    Args:
-        *args (iris.Cube)
-
-    Returns:
-        list
-
-    """
-    # Get the calendar arrays for all cubes
-    calendars = [cube.coord('time').units.num2date(cube.coord('time').points)
-                 for cube in args]
-    # Make all days 16 - we don't care for monthly data but we need to
-    # make it consistent for the subsequent comparisons
-    calendars = [[datetime.datetime(d.year, d.month, 16) for d in calendar]
-                 for calendar in calendars]
-
-    latest_start = max([calendar[0] for calendar in calendars])
-    earliest_end = min([calendar[-1] for calendar in calendars])
-    out = []
-    for cube, calendar in zip(args, calendars):
-        i_start = np.where(np.array(calendar) == latest_start)[0]
-        i_end = np.where(np.array(calendar) == earliest_end)[0]
-        out.append(cube[i_start:i_end+1])
-
-    return out
-
-
-# Linear horizontal regrid if the supplied regridding coordinates are
-# different to the cube's original coordinates
-def regrid(cube, gridpts):
-    if not (np.array_equal(gridpts[0][1], cube.coord('latitude').points) &
-            np.array_equal(gridpts[1][1], cube.coord('longitude').points)):
-        cube = iris.analysis.interpolate.linear(cube,gridpts)
-        cmip5.guess_bounds(cube)
-    return cube
-
-
-def common_grid(ref_index, *args):
-    """Put all supplied cubes on a common horizontal grid.
-
-    Args:
-        ref_index (int): index of the cube which is to be used as the
-            reference cube, i.e. the one which supplies the common grid
-        *args (iris.Cube): iris cubes
-
-    Returns:
-         iris.Cube [same number as supplied by *args]
-
-    """
-    if len(args) < 2:
-        raise Exception, ('Need to supply minimum of two cubes so they can'
-                          ' be put on a common grid')
-
-    # Name the reference cube
-    ref_cube = args[ref_index]
-
-    # Get the horizontal grid of the reference cube
-    gridpts = [('latitude', ref_cube.coord('latitude').points),
-               ('longitude', ref_cube.coord('longitude').points)]
-
-    # Interpolate all supplied cubes to the reference horizontal grid
-    cubes = [regrid(cube, gridpts) for cube in args]
-
-    return cubes
-
-
-def loop_dictionary(dictionary, function, *args):
-    for key,val in dictionary.items():
-        dictionary[key] = function(val, *args)
-    return dictionary
-
-
-def detrend_array(data, axis=0):
-    dshape = data.shape
-    rank = len(dshape)
-    ntim = dshape[axis]
-    newdims = np.r_[axis, 0:axis, axis+1:rank]
-    newdata = np.reshape(np.transpose(data, tuple(newdims)),
-                         (ntim, np.prod(dshape, axis=0) // ntim))
-    newdata = newdata.copy()
-    time = np.arange(ntim)
-    trend_arr = np.zeros_like(newdata)
-    N = newdata.shape[1]
-    for i in xrange(newdata.shape[1]):
-        print (float(i)/N)*100
-        regresults = stats.mstats.linregress(time, newdata[:, i])
-        trend_arr[:, i] = time*regresults[0]
-
-    newdata = newdata - trend_arr
-    tdshape = np.take(dshape, newdims, 0)
-    ret = np.reshape(newdata, tuple(tdshape))
-    vals = list(range(1, rank))
-    olddims = vals[:axis] + [0] + vals[axis:]
-    ret = np.transpose(ret, tuple(olddims))
-    return ret
-
-
-def detrend(cube):
-    """Linearly detrend data in an iris cube.  Uses stats.mstats which allows
-    for masked data points.
-
-    Args:
-        cube (iris.Cube)
-
-    Returns:
-        iris.Cube
-
-    """
-    coord_name_tuple = [coord.name() for coord in cube.dim_coords]
-    time_axis = coord_name_tuple.index('time')
-    new_data = detrend_array(cube.data, axis=time_axis)
-    return cube.copy(data=new_data)
-
-
-def constrain_dates(daterange, *data):
-    """Constrain cubes to cover a specified daterange.
-
-    Args:
-        daterange (str): time range covered (can be generated from
-            utils.gen_timestring())
-        *args (iris.Cube): cubes to constrain
-
-    Returns:
-        list of iris.Cube, or if a single cube is provided in *data, a single
-            iris.Cube.
-
-    """
-    # Get datetime objects representing the daterange
-    d1, d2 = [datetime.datetime(int(d[0:4]), int(d[4:6]), 15)
-              for d in (daterange.split('-'))]
-
-    ret = []
-    for cube in data:
-        # Get the datetime object array for each cube's time dimension
-        cubecal = cube.coord('time').units.num2date(cube.coord('time').points)
-        cubecal = np.array([datetime.datetime(d.year, d.month, 15)
-                            for d in cubecal])
-        # Find indices of datetime array within date range
-        mask = (cubecal >= d1) & (cubecal <= d2)
-        # Add masked cube to output array
-        ret.append(cube[np.where(mask==True)[0]])
-
-    # If only a single cube was passed in *data we don't need to return a list
-    if len(ret) == 0:
-        ret = ret[0]
-    return ret
-
-
-def regrid_data(grid_cube, *regrid_cubes):
-    """Regrid arbitrary number of cubes.  Masked data is handled by applying
-    a mask if more than half the data points within the target cell are masked.
-
-    Args:
-        grid_cube (iris.Cube): reference cube supplying new grid
-        *regrid_cubes (iris.Cube): cubes to regrid
-
-    Returns:
-        iris.Cube if only one cube regridded, list otherwise
-
-    """
-    import iris.experimental.regrid as regrid
-    ret_data = []
-    rg_func = regrid.regrid_area_weighted_rectilinear_src_and_grid
-    for cube in regrid_cubes:
-        ret_data.append(rg_func(cube, grid_cube, mdtol=0.5))
-    if len(regrid_cubes) == 1:
-        ret_data = ret_data[0]
-    return ret_data
 
 
 def annual_mean(cube):
@@ -301,6 +76,187 @@ def annual_mean(cube):
     return newcube
 
 
+def area_mean(*args):
+    """Calculate the area-weighted spatial mean of iris Cubes."""
+    ret = []
+    for cube in args:
+        grid_areas = iris.analysis.cartography.area_weights(cube)
+        ret.append(cube.collapsed(['latitude', 'longitude'],
+                                  iris.analysis.MEAN, weights=grid_areas))
+    if len(ret) == 1:
+        ret = ret[0]
+    return ret
+
+
+def area_weighted(cube):
+    """Weight a cube by latitude."""
+    grid_areas = iris.analysis.cartography.area_weights(cube)
+    return cube * grid_areas / np.mean(grid_areas)
+
+
+def climatology(cube, kind='month'):
+    """Calculate a climatology for a cube.  Can do monthly or yearly.
+
+    Args:
+        cube (iris.cube.Cube)
+        kind (Optional[str]): 'month' or 'year'
+
+    Returns:
+        iris.cube.Cube
+
+    """
+    aux_coords = [aux_coord.name() for aux_coord in cube.aux_coords]
+    if 'year' not in aux_coords:
+        cat.add_year(cube, 'time')
+    if 'month' not in aux_coords:
+        cat.add_month(cube, 'time')
+    return cube.aggregated_by(kind, iris.analysis.MEAN)
+
+
+def common_grid(ref_index, *args):
+    """Put all supplied cubes on a common horizontal grid.
+
+    Args:
+        ref_index (int): index of the cube which is to be used as the
+            reference cube, i.e. the one which supplies the common grid
+        *args (iris.Cube): iris cubes
+
+    Returns:
+         iris.Cube [same number as supplied by *args]
+
+    """
+    if len(args) < 2:
+        raise Exception, ('Need to supply minimum of two cubes so they can'
+                          ' be put on a common grid')
+
+    # Name the reference cube
+    ref_cube = args[ref_index]
+
+    # Get the horizontal grid of the reference cube
+    gridpts = [('latitude', ref_cube.coord('latitude').points),
+               ('longitude', ref_cube.coord('longitude').points)]
+
+    # Interpolate all supplied cubes to the reference horizontal grid
+    cubes = [regrid(cube, gridpts) for cube in args]
+
+    return cubes
+
+
+def constrain_dates(daterange, *data):
+    """Constrain cubes to cover a specified daterange.
+
+    Args:
+        daterange (str): time range covered (can be generated from
+            utils.gen_timestring())
+        *args (iris.Cube): cubes to constrain
+
+    Returns:
+        list of iris.Cube, or if a single cube is provided in *data, a single
+            iris.Cube.
+
+    """
+    # Get datetime objects representing the daterange
+    d1, d2 = [datetime.datetime(int(d[0:4]), int(d[4:6]), 15)
+              for d in (daterange.split('-'))]
+
+    ret = []
+    for cube in data:
+        # Get the datetime object array for each cube's time dimension
+        cubecal = cube.coord('time').units.num2date(cube.coord('time').points)
+        cubecal = np.array([datetime.datetime(d.year, d.month, 15)
+                            for d in cubecal])
+        # Find indices of datetime array within date range
+        mask = (cubecal >= d1) & (cubecal <= d2)
+        # Add masked cube to output array
+        ret.append(cube[np.where(mask==True)[0]])
+
+    # If only a single cube was passed in *data we don't need to return a list
+    if len(ret) == 0:
+        ret = ret[0]
+    return ret
+
+
+def detrend(cube):
+    """Linearly detrend data in an iris cube.  Uses stats.mstats which allows
+    for masked data points.
+
+    Args:
+        cube (iris.Cube)
+
+    Returns:
+        iris.Cube
+
+    """
+    coord_name_tuple = [coord.name() for coord in cube.dim_coords]
+    time_axis = coord_name_tuple.index('time')
+    new_data = detrend_array(cube.data, axis=time_axis)
+    return cube.copy(data=new_data)
+
+
+def detrended_anomalies(cube):
+    """Shortcut function to calculate anomalies of a detrended cube."""
+    return anomalies(detrend(cube))
+
+
+def detrend_array(data, axis=0):
+    dshape = data.shape
+    rank = len(dshape)
+    ntim = dshape[axis]
+    newdims = np.r_[axis, 0:axis, axis+1:rank]
+    newdata = np.reshape(np.transpose(data, tuple(newdims)),
+                         (ntim, np.prod(dshape, axis=0) // ntim))
+    newdata = newdata.copy()
+    time = np.arange(ntim)
+    trend_arr = np.zeros_like(newdata)
+    N = newdata.shape[1]
+    for i in xrange(newdata.shape[1]):
+        print (float(i)/N)*100
+        regresults = stats.mstats.linregress(time, newdata[:, i])
+        trend_arr[:, i] = time*regresults[0]
+
+    newdata = newdata - trend_arr
+    tdshape = np.take(dshape, newdims, 0)
+    ret = np.reshape(newdata, tuple(tdshape))
+    vals = list(range(1, rank))
+    olddims = vals[:axis] + [0] + vals[axis:]
+    ret = np.transpose(ret, tuple(olddims))
+    return ret
+
+
+def loop_dictionary(dictionary, function, *args):
+    for key,val in dictionary.items():
+        dictionary[key] = function(val, *args)
+    return dictionary
+
+
+def make_common_in_time(*args):
+    """Subet all cubes so they have the same time dimensions.
+
+    Args:
+        *args (iris.Cube)
+
+    Returns:
+        list
+
+    """
+    # Get the calendar arrays for all cubes
+    calendars = [cube.coord('time').units.num2date(cube.coord('time').points)
+                 for cube in args]
+    # Make all days 16 - we don't care for monthly data but we need to
+    # make it consistent for the subsequent comparisons
+    calendars = [[datetime.datetime(d.year, d.month, 16) for d in calendar]
+                 for calendar in calendars]
+
+    latest_start = max([calendar[0] for calendar in calendars])
+    earliest_end = min([calendar[-1] for calendar in calendars])
+    out = []
+    for cube, calendar in zip(args, calendars):
+        i_start = np.where(np.array(calendar) == latest_start)[0]
+        i_end = np.where(np.array(calendar) == earliest_end)[0]
+        out.append(cube[i_start:i_end+1])
+
+    return out
+
 
 def make_datetimes(cube):
     pseudo = cube.coord('time').units.num2date(cube.coord('time').points)
@@ -317,10 +273,36 @@ def read_file(filename):
     return contents
 
 
-def write_file(data, filename):
-    with open(filename, 'w') as file:
-        for line in data:
-            file.write('{}\n'.format(line))
+# Linear horizontal regrid if the supplied regridding coordinates are
+# different to the cube's original coordinates
+def regrid(cube, gridpts):
+    if not (np.array_equal(gridpts[0][1], cube.coord('latitude').points) &
+            np.array_equal(gridpts[1][1], cube.coord('longitude').points)):
+        cube = iris.analysis.interpolate.linear(cube,gridpts)
+        cmip5.guess_bounds(cube)
+    return cube
+
+
+def regrid_data(grid_cube, *regrid_cubes):
+    """Regrid arbitrary number of cubes.  Masked data is handled by applying
+    a mask if more than half the data points within the target cell are masked.
+
+    Args:
+        grid_cube (iris.Cube): reference cube supplying new grid
+        *regrid_cubes (iris.Cube): cubes to regrid
+
+    Returns:
+        iris.Cube if only one cube regridded, list otherwise
+
+    """
+    import iris.experimental.regrid as regrid
+    ret_data = []
+    rg_func = regrid.regrid_area_weighted_rectilinear_src_and_grid
+    for cube in regrid_cubes:
+        ret_data.append(rg_func(cube, grid_cube, mdtol=0.5))
+    if len(regrid_cubes) == 1:
+        ret_data = ret_data[0]
+    return ret_data
 
 
 def spatial_constraint(lat=[-90, 90], lon=[0, 360], inc_equal=True):
@@ -345,3 +327,21 @@ def spatial_constraint(lat=[-90, 90], lon=[0, 360], inc_equal=True):
 
     return iris.Constraint(coord_values={'latitude': lat_func,
                                          'longitude': lon_func})
+
+
+def time_mean(*args):
+    """Calculate the time average of iris CUbes"""
+    ret = []
+    for cube in args:
+        ret.append(cube.collapsed('time', iris.analysis.MEAN))
+
+    if len(ret) == 1:
+        ret = ret[0]
+    return ret
+
+
+def write_file(data, filename):
+    with open(filename, 'w') as file:
+        for line in data:
+            file.write('{}\n'.format(line))
+
