@@ -199,7 +199,24 @@ def detrended_anomalies(cube):
 
 
 def detrend_array(data, axis=0):
+    """This is substantially based on scipy.signal.detrend, but it differs
+    in two ways: 1) it removes just the slope rather than the slope and
+    the intercept, and 2) it uses stats.mstats.linregress and consequently
+    can handle masked data, though this is slower than the matrix-based
+    approach of scipy.signal.detrend.
+
+    Args:
+        data (array_like): the input data
+        axis (Optional[int]): axis along which to detrend
+
+    Returns:
+        array_like
+
+    """
     dshape = data.shape
+
+    # Restructure data so that axis is along first dimension and
+    #  all other dimensions are collapsed into second dimension.
     rank = len(dshape)
     ntim = dshape[axis]
     newdims = np.r_[axis, 0:axis, axis+1:rank]
@@ -209,12 +226,16 @@ def detrend_array(data, axis=0):
     time = np.arange(ntim)
     trend_arr = np.zeros_like(newdata)
     N = newdata.shape[1]
+
+    # Calculate trend and remove it.
     for i in xrange(newdata.shape[1]):
         print (float(i)/N)*100
         regresults = stats.mstats.linregress(time, newdata[:, i])
         trend_arr[:, i] = time*regresults[0]
 
     newdata = newdata - trend_arr
+
+    # Put data back in original shape.
     tdshape = np.take(dshape, newdims, 0)
     ret = np.reshape(newdata, tuple(tdshape))
     vals = list(range(1, rank))
@@ -224,6 +245,17 @@ def detrend_array(data, axis=0):
 
 
 def loop_dictionary(dictionary, function, *args):
+    """Apply a function to all values in a dictionary.
+
+    Args:
+        dictionary (dict): input dictionary
+        function (function): function to apply
+        *args: arguments to `function`
+
+    Returns:
+        dict
+
+    """
     for key,val in dictionary.items():
         dictionary[key] = function(val, *args)
     return dictionary
@@ -259,12 +291,31 @@ def make_common_in_time(*args):
 
 
 def make_datetimes(cube):
+    """Return an array of datetime.datetime objects correponsing to a cube's
+    time coordinate.
+
+    Args:
+        cube (iris.cube.Cube): input data
+
+    Returns:
+        array of datetime.datetime
+
+    """
     pseudo = cube.coord('time').units.num2date(cube.coord('time').points)
     return np.array([datetime.datetime(d.year, d.month, d.day)
                      for d in pseudo])
 
 
 def read_file(filename):
+    """Read in a text file.
+
+    Args:
+        filename (str): file to read
+
+    Returns:
+        list
+
+    """
     contents = []
     with open(filename, 'r') as file:
         for line in file:
@@ -273,9 +324,18 @@ def read_file(filename):
     return contents
 
 
-# Linear horizontal regrid if the supplied regridding coordinates are
-# different to the cube's original coordinates
 def regrid(cube, gridpts):
+    """Linear horizontal regrid if the supplied regridding coordinates are
+    different to the cube's original coordinates.
+
+    Args:
+        cube (iris.cube.Cube): cube to regrid
+        gridpts: grid to regrid to
+
+    Returns:
+        iris.cube.Cube
+
+    """
     if not (np.array_equal(gridpts[0][1], cube.coord('latitude').points) &
             np.array_equal(gridpts[1][1], cube.coord('longitude').points)):
         cube = iris.analysis.interpolate.linear(cube,gridpts)
@@ -341,6 +401,7 @@ def time_mean(*args):
 
 
 def write_file(data, filename):
+    """Write data to a text file."""
     with open(filename, 'w') as file:
         for line in data:
             file.write('{}\n'.format(line))
