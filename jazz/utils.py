@@ -142,6 +142,34 @@ def common_grid(ref_index, *args):
     return cubes
 
 
+def constrain_on_time(daterange, *args):
+    """Extract the part of the cube falling in the time interval given by
+    `daterange'.
+
+    Args:
+        daterange (2-element list of datetime.datetime)
+        *args: any number of (iris.cube.Cube)
+
+    Returns:
+        any number of iris.cube.Cube
+
+    """
+    # Check for midnight in daterange. This causes problems since it is
+    # technically in two different days (or none!). Add an hour on to
+    # account for this.
+    daterange = [d if d.hour != 0 else d + datetime.timedelta(seconds=3600)
+                 for d in daterange]
+
+    dates = [args[0].coord('time').units.date2num(d) for d in daterange]
+    constraint = iris.Constraint(time= lambda c: dates[0] <= c <= dates[1])
+
+    out = [cube.extract(constraint) for cube in args]
+    if len(out) == 1:
+        out = out[0]
+
+    return out
+
+
 def constrain_dates(daterange, *data):
     """Constrain cubes to cover a specified daterange.
 
