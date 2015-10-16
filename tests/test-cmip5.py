@@ -22,3 +22,10 @@ def test_fetch():
 def test_get_fx():
     cube = cmip5.get_fx('IPSL-CM5A-LR', 'sftlf')
     assert isinstance(cube, iris.cube.Cube)
+
+
+def test_fetch2():
+    path = cmip5.path('CCSM4', 'rcp85', 'mon', 'atmos', 'Amon',
+                      '*', 'ts')
+    cube = cmip5.fetch(path)
+    assert isinstance(cube, iris.cube.Cube)

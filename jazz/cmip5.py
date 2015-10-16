@@ -113,28 +113,16 @@ def availability(model, experiment, time_frequency, realm, cmor_table,
                                    cmor_table, ensemble, variable)))
 
 
-def common_dict(dict_list):
-    """Take a list of dictionaries and delete any keys which have different
-    values in the list.
-    """
-    for compdict in dict_list:
-
-        # Some cubes have the comment attribute, but most don't. Best to
-        # just get rid of it
-        if 'comment' in compdict:
-            del compdict['comment']
-
-        differences = [k for k,v in dict_list[0].iteritems() if compdict[k]!=v]
-    return {k:v for k,v in dict_list[0].iteritems() if k not in differences}
-
-
 def clean_cubelist_atts(cubelist):
     """Wrapper for common_dict - modifies the attributes of a list of
     dictionaries to ensure error-free concatenation."""
-    attributes = [cube.attributes for cube in cubelist]
-    common_attributes = common_dict(attributes)
+    att_dicts = [cube.attributes for cube in cubelist]
+    realizations = set([d['realization'] for d in att_dicts])
+    att_dicts = [[d for d in att_dicts if d['realization'] == r]
+                 for r in realizations]
+    att_dicts = [dict_sublist[0] for dict_sublist in att_dicts]
     for cube in cubelist:
-        cube.attributes = common_attributes
+        cube.attributes = att_dicts[cube.attributes['realization']-1]
 
 
 def add_realization_number(cube):
@@ -191,6 +179,52 @@ def check_realizations_timepoint_duplicates(cubes):
     return new_cubes
 
 
+def check_coords(cubes, write_to='./offending_cube'):
+    """Check coordinates are matching.  If they are not this could be
+    quite a problem!  However, some models' have files which read in with
+    slightly different coordinates (CCSM4, for example).  In this case
+    the difference is miniscule so we can safely replace the coordinates.
+    This method replaces coordinates but also informs the user it is doing
+    this. It also prints and optionally saves the summary of the offending
+    cube.
+
+    Args:
+        cubes (iris.cube.CubeList): list of cubes to check
+        write_to (Optional[str]): path to which to write warnings
+
+    Returns:
+        iris.cube.CubeList
+
+    """
+    # Get the names of the spatial coords
+    coord_names = [coord.name() for coord in cubes[0].dim_coords]
+    if 'time' in coord_names:
+        coord_names.remove('time')
+
+    for coord_name in coord_names:
+        # Make a list of the coordinates' points for each cube
+        points_list = [cube.coord(coord_name).points for cube in cubes]
+
+        # Loop over the list of points for all the cubes
+        for p in xrange(len(points_list)-1):
+
+            # If the coordinates are different from the first set,
+            # replace them with the first set
+            if not (points_list[p+1] == points_list[0]).all():
+                cubes[p+1].replace_coord(cubes[0].coord(coord_name))
+
+                # Notify user
+                warnings.warn('Replacing the coordinates of a cube. '
+                              'Offending cube is {}'.
+                              format(cubes[p+1].summary()))
+
+                if write_to is not None:
+                    utils.write_file(cubes[p+1].summary(),
+                                     '{0}_{1}_{2}'.format(write_to,
+                                                          coord_name,
+                                                          p))
+
+
 def fetch(location, constraint=None):
     """Fetch data from a netCDF or a directory containing netCDFs using iris.
     A common cause of concatenate errors is when the time data aren't
@@ -222,42 +256,15 @@ def fetch(location, constraint=None):
         coord_names = [coord.standard_name for coord in cubes[0].coords()]
         if 'time' in coord_names:
             cubes = check_realizations_timepoint_duplicates(cubes)
-        try:
-            cubes = cubes.concatenate()
-            realizations = [cube.coord('realization').points[0]
-                            for cube in cubes]
-            if len(set(realizations)) != 1:
-                cubes = iris.cube.CubeList(utils.make_common_in_time(*cubes))
+        check_coords(cubes)
 
-            cube = cubes.merge_cube()
-        except:
-            # If concatenation fails, try the manual approach - forming a new
-            # cube.
-            print 'Automatic concatenation using iris failed. Trying manual.'
-            newdata = []
-            newtime = []
-            for cube in cubes:
-                newdata.extend(cube.data)
-                newtime.extend(cube.coord('time').points)
+        cubes = cubes.concatenate()
+        realizations = [cube.coord('realization').points[0]
+                        for cube in cubes]
+        if len(set(realizations)) != 1:
+            cubes = iris.cube.CubeList(utils.make_common_in_time(*cubes))
 
-            newdata = np.array(newdata)
-            newtime = np.array(newtime)
-
-            # Define the new, concatenated time coordinate
-            newtimecoord = iris.coords.DimCoord(newtime,
-                                                standard_name=cube.
-                                                coord('time').standard_name,
-                                                units=cube.coord('time').units)
-
-            # Make the new cube
-            dim_coords_and_dims = list(enumerate(cube.dim_coords))
-            dim_coords_and_dims = [item[::-1] for item in dim_coords_and_dims]
-            dim_coords_and_dims[0] = [newtimecoord, 0]
-            cube = iris.cube.Cube(newdata,
-                                  standard_name=cube.standard_name,
-                                  units=cube.units,
-                                  attributes=cube.attributes,
-                                  dim_coords_and_dims=dim_coords_and_dims)
+        cube = cubes.merge_cube()
 
     return cube
 
