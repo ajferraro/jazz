@@ -117,12 +117,12 @@ def clean_cubelist_atts(cubelist):
     """Wrapper for common_dict - modifies the attributes of a list of
     dictionaries to ensure error-free concatenation."""
     att_dicts = [cube.attributes for cube in cubelist]
-    realizations = set([d['realization'] for d in att_dicts])
-    att_dicts = [[d for d in att_dicts if d['realization'] == r]
-                 for r in realizations]
-    att_dicts = [dict_sublist[0] for dict_sublist in att_dicts]
-    for cube in cubelist:
-        cube.attributes = att_dicts[cube.attributes['realization']-1]
+    realizations = [d['realization'] for d in att_dicts]
+    att_dicts = {k: v for k, v in zip(realizations, att_dicts)}
+    for realization in realizations:
+        indices = [i for i, j in enumerate(realizations) if j == realization]
+        for index in indices:
+            cubelist[index].attributes = att_dicts[realization]
 
 
 def add_realization_number(cube):
@@ -138,7 +138,7 @@ def clean(cube, field, fname):
 def guess_bounds(cube):
     """Guess the bounds for the cubes coordinates if there are none."""
     for coord in cube.coords():
-        if (coord.bounds is None) and (coord.shape != (1,)):
+        if (coord.bounds is None) and len(coord.points) != 1:
             coord.guess_bounds()
 
 
@@ -225,6 +225,37 @@ def check_coords(cubes, write_to='./offending_cube'):
                                                           p))
 
 
+def homogenise_air_pressure(cubes):
+    """Some files extend to higher altitude.  Extract only those altitude
+    points common to all cubes.
+
+    Args:
+        cubes (iris.cube.CubeList)
+
+    Returns:
+        iris.cube.CubeList
+
+    """
+    # Get smallest air pressure coord
+    coords = [cube.coord('air_pressure').points for cube in cubes]
+
+    # Find smallest air pressure coord
+    smallest_size = np.min([coord.shape[0] for coord in coords])
+    smallest_pts = [coord for coord in coords if coord.shape[0] ==
+                    smallest_size]
+
+    # Form a constraint based on the smallest points
+    constraint = iris.Constraint(coord_values={'air_pressure': lambda p:
+                                               p >= np.min(smallest_pts)})
+    cubes = cubes.extract(constraint)
+    for cube in cubes:
+        if len(cube.coord('air_pressure').points) > 1:
+            cube.coord('air_pressure').bounds = None
+            cube.coord('air_pressure').guess_bounds()
+
+    return cubes
+
+
 def fetch(location, constraint=None):
     """Fetch data from a netCDF or a directory containing netCDFs using iris.
     A common cause of concatenate errors is when the time data aren't
@@ -250,12 +281,14 @@ def fetch(location, constraint=None):
         cube = cubes[0]
     else:
         clean_cubelist_atts(cubes)
-        iris.util.unify_time_units(cubes) # NEW
+        iris.util.unify_time_units(cubes)
         from iris.experimental.equalise_cubes import equalise_attributes
         equalise_attributes(cubes)
         coord_names = [coord.standard_name for coord in cubes[0].coords()]
         if 'time' in coord_names:
             cubes = check_realizations_timepoint_duplicates(cubes)
+        if 'air_pressure' in coord_names:
+            cubes = homogenise_air_pressure(cubes)
         check_coords(cubes)
 
         cubes = cubes.concatenate()
