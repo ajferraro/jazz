@@ -166,13 +166,15 @@ def check_for_timepoint_duplicates(cubes):
 
 
 def check_realizations_timepoint_duplicates(cubes):
-
+    cubes = ensure_time_axis(cubes)
     new_cubes = iris.cube.CubeList()
     # Deal with duplicated data
-    realizations = set([cube.coord('realization').points[0] for cube in cubes])
+    realizations = set([cube.coord('realization').points[0]
+                        for cube in cubes])
     for realization in realizations:
         constraint = iris.Constraint(coord_values={'realization':
-                                                   lambda r: r == realization})
+                                                   lambda r: r ==
+                                                   realization})
         cubes_realization = cubes.extract(constraint)
         new_cubes.extend(check_for_timepoint_duplicates(cubes_realization))
 
@@ -191,9 +193,6 @@ def check_coords(cubes, write_to='./offending_cube'):
     Args:
         cubes (iris.cube.CubeList): list of cubes to check
         write_to (Optional[str]): path to which to write warnings
-
-    Returns:
-        iris.cube.CubeList
 
     """
     # Get the names of the spatial coords
@@ -254,6 +253,27 @@ def homogenise_air_pressure(cubes):
             cube.coord('air_pressure').guess_bounds()
 
     return cubes
+
+
+def ensure_time_axis(cubes):
+    """Add a time axis if the cube has a singleton (i.e. scalar) time
+    dimension.
+
+    Args:
+        cubes (iris.cube.CubeList)
+
+    Returns:
+        iris.cube.CubeList
+
+    """
+    new_list = iris.cube.CubeList()
+    for cube in cubes:
+        aux_coord_names = [coord.name() for coord in cube.aux_coords]
+        if 'time' in aux_coord_names:
+            new_list.append(iris.util.new_axis(cube, 'time'))
+        else:
+            new_list.append(cube)
+    return new_list
 
 
 def fetch(location, constraint=None):
@@ -337,8 +357,3 @@ def available_models(experiments, variables, frequencies, realms,
         utils.write_file(sorted(result), outfile)
 
     return sorted(result)
-
-
-
-
-
