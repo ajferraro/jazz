@@ -272,6 +272,23 @@ def detrend_array(data, axis=0):
     return ret
 
 
+def gen_timestring(cube):
+    """Generate a string describing time range covered by a cube.
+
+    Args:
+        cube (iris.Cube)
+
+    Returns:
+        str
+
+    """
+    calendar = cube.coord('time').units.num2date(cube.coord('time').points)
+    date_start = calendar[0]
+    date_end = calendar[-1]
+    return '-'.join([str(date_start.year)+str(date_start.month).zfill(2),
+                     str(date_end.year)+str(date_end.month).zfill(2)])
+
+
 def loop_dictionary(dictionary, function, *args):
     """Apply a function to all values in a dictionary.
 
