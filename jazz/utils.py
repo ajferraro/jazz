@@ -451,3 +451,8 @@ def write_file(data, filename):
         for line in data:
             file.write('{}\n'.format(line))
 
+
+def mkdirp(f):
+    d = os.path.dirname(f)
+    if not os.path.exists(d):
+        os.makedirs(d)
