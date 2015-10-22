@@ -38,42 +38,19 @@ def anomalies(cube, kind='month'):
 
 
 def annual_mean(cube):
-    """Calculate the annual mean from a monthly cube.  The time dimension
-    of the new cube takes the month of July to identify each year.
+    """Calculate annual mean of a cube.
 
     Args:
         cube (iris.cube.Cube)
 
     Returns:
-        newcube (iris.cube.Cube)
+        iris.cube.Cube
 
     """
-    dates = cube.coord('time').units.num2date(cube.coord('time').points)
-    months = np.array([d.month for d in dates])
-    where_jans = np.where(months == 1)[0]
-    where_juns = np.where(months == 6)[0]
-
-    # Create a new time coordinate, including bounds
-    new_time_coord = cube.coord('time')[where_juns]
-    bounds = np.zeros(new_time_coord.shape+(2,))
-    for y in xrange(bounds.shape[0]):
-        bounds[y,0] = y*365 + 1
-        bounds[y,1] = y*365 + 365
-
-    new_time_coord.bounds = bounds
-
-    # Calculate annual mean data
-    data = np.array([cube[i:i+12].collapsed('time', iris.analysis.MEAN).data
-                     for i in where_jans])
-
-    # Make the new cube
-    dim_coords_and_dims = list(enumerate(cube.dim_coords))
-    dim_coords_and_dims = [item[::-1] for item in dim_coords_and_dims]
-    dim_coords_and_dims[0] = (new_time_coord, 0)
-    newcube = iris.cube.Cube(data, standard_name=cube.standard_name,
-                             long_name=cube.long_name, units=cube.units,
-                             dim_coords_and_dims=dim_coords_and_dims)
-    return newcube
+    aux_coords = [aux_coord.name() for aux_coord in cube.aux_coords]
+    if 'year' not in aux_coords:
+        cat.add_year(cube, 'time')
+    return cube.aggregated_by('year', iris.analysis.MEAN)
 
 
 def area_mean(*args):
