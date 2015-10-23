@@ -126,9 +126,16 @@ def clean_cubelist_atts(cubelist):
 
 
 def add_realization_number(cube):
-    realization_number = cube.attributes['realization']
-    cube.add_aux_coord(iris.coords.AuxCoord(np.int32(realization_number),
-                                            'realization'))
+    """Add a realization number to a cube's auxiliary coordinates.
+    Skip if no realization number is found.
+    """
+    try:
+        realization_number = cube.attributes['realization']
+        realization_number = np.int32(realization_number)
+        cube.add_aux_coord(iris.coords.AuxCoord(realization_number),
+                                                'realization'))
+    except:
+        pass
 
 def clean(cube, field, fname):
     guess_bounds(cube)
