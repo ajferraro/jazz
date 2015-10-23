@@ -133,7 +133,7 @@ def add_realization_number(cube):
         realization_number = cube.attributes['realization']
         realization_number = np.int32(realization_number)
         cube.add_aux_coord(iris.coords.AuxCoord(realization_number),
-                                                'realization'))
+                                                'realization')
     except:
         pass
 
