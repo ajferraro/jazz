@@ -129,13 +129,13 @@ def add_realization_number(cube):
     """Add a realization number to a cube's auxiliary coordinates.
     Skip if no realization number is found.
     """
-    try:
+    if 'realization' in cube.attributes.keys():
         realization_number = cube.attributes['realization']
-        realization_number = np.int32(realization_number)
-        cube.add_aux_coord(iris.coords.AuxCoord(realization_number),
-                                                'realization')
-    except:
-        pass
+    else:
+        realization_number = 1
+    realization_number = np.int32(realization_number)
+    cube.add_aux_coord(iris.coords.AuxCoord(realization_number,
+                       'realization'))
 
 def clean(cube, field, fname):
     guess_bounds(cube)
@@ -307,7 +307,7 @@ def fetch(location, constraint=None):
     if os.path.isfile(location):
         cube = cubes[0]
     else:
-        clean_cubelist_atts(cubes)
+        #clean_cubelist_atts(cubes)
         iris.util.unify_time_units(cubes)
         from iris.experimental.equalise_cubes import equalise_attributes
         equalise_attributes(cubes)
