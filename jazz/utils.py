@@ -1,3 +1,4 @@
+import inspect
 import numpy as np
 import os
 from scipy import stats
@@ -7,6 +8,15 @@ import iris
 import iris.coord_categorisation as cat
 
 import cmip5
+
+
+def get_filename():
+    return inspect.getfile(inspect.currentframe())
+
+
+def get_filedir():
+    filename = get_filename()
+    return os.path.dirname(os.path.abspath(filename))
 
 
 def anomalies(cube, kind='month'):
