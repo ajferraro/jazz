@@ -440,7 +440,16 @@ def write_file(data, filename):
             file.write('{}\n'.format(line))
 
 
-def mkdirp(f):
-    d = os.path.dirname(f)
-    if not os.path.exists(d):
-        os.makedirs(d)
+def mkdirp(path):
+    """Make directory if it does not already exist.
+
+    Args:
+        path (str): path to create
+
+    """
+    # Add a trailing slash if not already present
+    if path[-1] is not '/':
+        path = '{}/'.format(path)
+    directory = os.path.dirname(path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
