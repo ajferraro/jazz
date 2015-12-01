@@ -453,3 +453,8 @@ def mkdirp(path):
     directory = os.path.dirname(path)
     if not os.path.exists(directory):
         os.makedirs(directory)
+
+
+def zonal_mean(cube):
+    """Shortcut function to calculate mean of a cube over longitude."""
+    return cube.collapsed('longitude', iris.analysis.MEAN)
