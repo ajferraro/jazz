@@ -79,4 +79,5 @@ def save(path, ext='png', close=True, verbose=True):
 
     if verbose:
         print("Done")
+
 plot_styling()
