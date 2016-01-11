@@ -357,6 +357,10 @@ def make_datetimes(cube):
                      for d in pseudo])
 
 
+def merid_mean(cube):
+    return cube.collapsed('latitude', iris.analysis.MEAN)
+
+
 def read_file(filename):
     """Read in a text file.
 
