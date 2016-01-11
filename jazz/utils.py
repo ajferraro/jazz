@@ -3,6 +3,7 @@ import numpy as np
 import os
 from scipy import stats
 import datetime
+import warnings
 
 import iris
 import iris.coord_categorisation as cat
@@ -78,8 +79,25 @@ def area_mean(*args):
 
 def area_weighted(cube):
     """Weight a cube by latitude."""
+    # Check to see if the cube has already been weighted.
+    try:
+        already_weighted = (cube.attributes['area_weighted'] == True)
+    except KeyError:
+        already_weighted = False
+
     grid_areas = iris.analysis.cartography.area_weights(cube)
-    return cube * grid_areas / np.mean(grid_areas)
+
+    outcube = cube.copy()
+    outcube.data = outcube.data * grid_areas / np.mean(grid_areas)
+    outcube.attributes['area_weighted'] = True
+
+    if already_weighted:
+        MESSAGE = ('Cube has already been area weighted.\n'
+                   'I am doing it again but make sure that is what you want!\n'
+                   'The cube is {}'.format(repr(cube)))
+        warnings.warn(MESSAGE, RuntimeWarning)
+
+    return outcube
 
 
 def climatology(cube, kind='month'):
