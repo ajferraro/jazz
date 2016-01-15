@@ -143,7 +143,8 @@ def clean(cube, field, fname):
 
 
 def guess_bounds(cube):
-    """Guess the bounds for the cubes coordinates if there are none."""
+    """Guess the bounds for the cubes coordinates if there are none. Currently
+    only considers latitude and longitude and not height."""
     for coord in cube.coords():
         if (coord.bounds is None) and len(coord.points) != 1:
             coord.guess_bounds()
@@ -364,3 +365,47 @@ def available_models(experiments, variables, frequencies, realms,
         utils.write_file(sorted(result), outfile)
 
     return sorted(result)
+
+
+
+
+    dates = [cube.coord('time').units.num2date(cube.coord('time').points)
+             for cube in cubes]
+
+
+    import datetime
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
+    import matplotlib.cbook as cbook
+
+    years = mdates.YearLocator()   # every year
+    months = mdates.MonthLocator()  # every month
+    yearsFmt = mdates.DateFormatter('%Y')
+
+    fig, ax = plt.subplots()
+    for i in xrange(len(dates)):
+        ax.plot(dates[i], [i]*len(dates[i]))
+
+    # format the ticks
+    ax.xaxis.set_major_locator(years)
+    ax.xaxis.set_major_formatter(yearsFmt)
+    ax.xaxis.set_minor_locator(months)
+
+    #datemin = datetime.date(r.date.min().year, 1, 1)
+    #datemax = datetime.date(r.date.max().year + 1, 1, 1)
+    #datetimeax.set_xlim(datemin, datemax)
+
+
+    # format the coords message box
+    #def price(x):
+    #    return '$%1.2f' % x
+    #ax.format_xdata = mdates.DateFormatter('%Y-%m-%d')
+    #ax.format_ydata = price
+    #figax.grid(True)
+
+    # rotates and right aligns the x labels, and moves the bottom of the
+    # axes up to make room for them
+    fig.autofmt_xdate()
+
+    plt.show()
