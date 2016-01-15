@@ -31,7 +31,7 @@ def label_subplots(ax, case='lower', xpos=0, ypos=1.05, **kwargs):
                   transform=axes.transAxes)
 
 
-def save(path, ext='png', close=True, verbose=True):
+def save(path, exts=['png'], close=True, verbose=True):
     """Save a figure from pyplot.
     Parameters
     ----------
@@ -54,24 +54,29 @@ def save(path, ext='png', close=True, verbose=True):
     http://www.jesshamrick.com/2012/09/03/saving-figures-from-pyplot/
     """
 
-    # Extract the directory and filename from the given path
-    directory = os.path.split(path)[0]
-    filename = "%s.%s" % (os.path.split(path)[1], ext)
-    if directory == '':
-        directory = '.'
+    if not isinstance(exts, list):
+        exts = list(exts)
 
-    # If the directory does not exist, create it
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    for ext in exts:
 
-    # The final path to save to
-    savepath = os.path.join(directory, filename)
+        # Extract the directory and filename from the given path
+        directory = os.path.split(path)[0]
+        filename = "%s.%s" % (os.path.split(path)[1], ext)
+        if directory == '':
+            directory = '.'
 
-    if verbose:
-        print("Saving figure to '%s'..." % savepath),
+        # If the directory does not exist, create it
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
-    # Actually save the figure
-    plt.savefig(savepath)
+        # The final path to save to
+        savepath = os.path.join(directory, filename)
+
+        if verbose:
+            print("Saving figure to '%s'..." % savepath),
+
+        # Actually save the figure
+        plt.savefig(savepath)
 
     # Close it
     if close:
