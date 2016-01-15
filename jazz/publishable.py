@@ -73,7 +73,7 @@ def save(path, exts=['png'], close=True, verbose=True):
         savepath = os.path.join(directory, filename)
 
         if verbose:
-            print("Saving figure to '%s'..." % savepath),
+            print("Saving figure to '%s'...\n" % savepath),
 
         # Actually save the figure
         plt.savefig(savepath)
