@@ -14,6 +14,8 @@ import numpy as np
 import iris
 
 from constants import SPECIFIC_GAS_CONSTANT_FOR_DRY_AIR as RD
+from constants import SPECIFIC_GAS_CONSTANT_FOR_WATER_VAPOUR as RV
+from constants import EPSILON
 from constants import GRAVITATIONAL_ACCELERATION as GRAV
 
 
@@ -62,3 +64,106 @@ def svp(ta):
         return svp_cube
     else:
         return svp_data
+
+
+def hus_from_hur(hur, ta, pres):
+    """Calculate specific humidity from relative humidity. Uses equation 3.64
+    of Wallace and Hobbs (2006).
+
+    Args:
+        hur (float): relative humidity.
+        ta (float): air temperature.
+        pres (float): air pressure.
+
+    Returns:
+        float
+
+    """
+    # Calculate saturation humidity mixing ratio
+    sat_vapour_pres = svp(ta)
+    sat_humidity_mixing_ratio = shmr(sat_vapour_pres, pres)
+
+    # Calculate humidity mixing ratio
+    humidity_mixing_ratio = sat_humidity_mixing_ratio*hur/100
+
+    # Convert to specific humidity
+    return hus_from_mr(humidity_mixing_ratio)
+
+
+def hur_from_hus(hus, ta, pres):
+    """Calculate relative humidity from specific humidity.  Uses Equation 3.64
+    of Wallace and Hobbs (2006).
+
+    Args:
+        hus (float): specific humidity.
+        ta (float): air temperature.
+        pres (float): air pressure.
+
+    Returns:
+        float
+
+    """
+    # Convert specific humidity into humidity mixing ratio
+    mr = mr_from_hus(hus)
+
+    # Calculate sat humidity mixing ratio
+    sat_vapour_pres = svp(ta)
+    mr_sat = shmr(sat_vapour_pres, pres)
+
+    return 100*mr/mr_sat
+
+
+def hus_from_mr(mr):
+    """Calculate specific humidity from mixing ratio."""
+    return mr/(1+mr)
+
+
+def mr_from_hus(hus):
+    """Calculate mixing ratio from specific humidity."""
+    return hus/(1-hus)
+
+
+def vp(mr, pres):
+    """Calculate water vapour pressure from Equation 3.59 of Wallace and Hobbs
+    (2008).
+
+    Args:
+        mr (float): mixing ratio.
+        pres (float): air pressure.
+
+    Returns:
+        float
+
+    """
+    return (mr*pres)/(mr+EPSILON)
+
+
+def virtual_temperature(ta, mr):
+    """Calculate virtual temperature using a more exact form of Equation 3.60
+    of Wallace and Hobbs (2008).
+
+    Args:
+        ta (float): air temperature.
+        mr (float): mixing ratio.
+
+    Returns:
+        float
+
+    """
+    return ta*(mr+EPSILON)/(EPSILON*(1+mr))
+
+
+def shmr(sat_vapour_pres, pres):
+    """Calculate saturation humidity mixing ratio using Equation 3.63 of
+    Wallace and Hobbs (2008).
+
+    Args:
+        sat_vapour_pres (float): saturation vapour pressure.
+        pres (float): air pressure.
+
+    Returns:
+        float
+
+    """
+    return EPSILON*(sat_vapour_pres/
+                    (pres-sat_vapour_pres))
