@@ -120,7 +120,7 @@ def hus_from_mr(mr):
 
 def mr_from_hus(hus):
     """Calculate mixing ratio from specific humidity."""
-    return hus/(1-hus)
+    return hus/(1+(-1*hus))
 
 
 def vp(mr, pres):
