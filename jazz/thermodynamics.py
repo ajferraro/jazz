@@ -13,6 +13,8 @@ import numpy as np
 
 import iris
 
+from constants import SPECIFIC_HEAT_CONSTANT_PRESSURE as CP
+from constants import LATENT_HEAT_OF_CONDENSATION_OF_WATER as LV
 from constants import SPECIFIC_GAS_CONSTANT_FOR_DRY_AIR as RD
 from constants import SPECIFIC_GAS_CONSTANT_FOR_WATER_VAPOUR as RV
 from constants import EPSILON
@@ -85,6 +87,7 @@ def hus_from_hur(hur, ta, pres):
 
     # Calculate humidity mixing ratio
     humidity_mixing_ratio = sat_humidity_mixing_ratio*hur/100
+    print 'Converting hur from % to fraction'
 
     # Convert to specific humidity
     return hus_from_mr(humidity_mixing_ratio)
@@ -110,6 +113,7 @@ def hur_from_hus(hus, ta, pres):
     sat_vapour_pres = svp(ta)
     mr_sat = shmr(sat_vapour_pres, pres)
 
+    print 'Converting hur from fraction to %'
     return 100*mr/mr_sat
 
 
@@ -167,3 +171,18 @@ def shmr(sat_vapour_pres, pres):
     """
     return EPSILON*(sat_vapour_pres/
                     (pres-sat_vapour_pres))
+
+
+def potential_temperature(ta, pres, pres_ref=1E5):
+    """Calculate potential temperature.
+
+    Args:
+        ta (float): air temperature (K).
+        pres (float): air pressure (hPa) corresponding to `ta`.
+        pref_ref (Optional[float]): reference pressure (hPa).
+
+    Returns:
+        float
+
+    """
+    return ta*(pres_ref/pres)**(RD/CP)
