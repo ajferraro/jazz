@@ -1,4 +1,3 @@
-
 # Switch default colour map from jet to cubehelix
 image.cmap : cubehelix
 
@@ -9,11 +8,7 @@ xtick.color : .15
 xtick.major.pad : 5.0
 ytick.major.pad : 5.0
 ytick.major.width : 0.5
-#ytick.minor.size : 3.0
-#ytick.major.size : 6.0
 ytick.minor.width : 0.5
-#xtick.minor.size : 3.0
-#xtick.major.size : 6.0
 xtick.labelsize : 10.
 ytick.labelsize : 10.
 

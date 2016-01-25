@@ -8,7 +8,6 @@ xtick.color : .15
 # Distance between ticks and labels
 xtick.major.pad : 8.0
 ytick.major.pad : 8.0
-ytick.major.width : 0.5
 ytick.minor.width : 0.5
 xtick.labelsize : 13.
 ytick.labelsize : 13.
