@@ -189,7 +189,7 @@ def check_realizations_timepoint_duplicates(cubes):
     return new_cubes
 
 
-def check_coords(cubes, write_to='./offending_cube'):
+def check_coords(cubes, write_to='./.jazz/offending_cube'):
     """Check coordinates are matching.  If they are not this could be
     quite a problem!  However, some models' have files which read in with
     slightly different coordinates (CCSM4, for example).  In this case
@@ -226,6 +226,7 @@ def check_coords(cubes, write_to='./offending_cube'):
                               format(cubes[p+1].summary()))
 
                 if write_to is not None:
+                    utils.mkdirp(write_to)
                     utils.write_file(cubes[p+1].summary(),
                                      '{0}_{1}_{2}'.format(write_to,
                                                           coord_name,
