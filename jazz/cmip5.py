@@ -309,7 +309,7 @@ def fetch(location, constraint=None):
     cubes = cubes.extract(iris.Constraint(cube_func=lambda cube:
                                           cube.var_name == var_name))
 
-    if os.path.isfile(location):
+    if len(cubes) == 1:
         cube = cubes[0]
     else:
         #clean_cubelist_atts(cubes)
