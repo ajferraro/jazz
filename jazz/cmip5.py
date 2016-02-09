@@ -143,11 +143,14 @@ def clean(cube, field, fname):
 
 
 def guess_bounds(cube):
-    """Guess the bounds for the cubes coordinates if there are none. Currently
-    only considers latitude and longitude and not height."""
-    for coord in cube.coords():
-        if (coord.bounds is None) and len(coord.points) != 1:
-            coord.guess_bounds()
+    """Guess the bounds for the cubes coordinates if there are none."""
+    for coord in cube.dim_coords:
+        condition = ((coord.bounds is None) and len(coord.points) != 1)
+        if condition:
+            try:
+                coord.guess_bounds()
+            except:
+                pass
 
 
 def check_for_timepoint_duplicates(cubes):
