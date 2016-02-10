@@ -206,6 +206,12 @@ def check_coords(cubes, write_to='./.jazz/offending_cube'):
         write_to (Optional[str]): path to which to write warnings
 
     """
+    # Remove attributes from auxiliary coordinates - these can sometimes
+    # prevent merging and concatenation.
+    for cube in cubes:
+        for coord in cube.aux_coords:
+            coord.attributes = {}
+
     # Get the names of the spatial coords
     coord_names = [coord.name() for coord in cubes[0].dim_coords]
     if 'time' in coord_names:
