@@ -11,6 +11,7 @@ Common thermodynamics.
 
 import numpy as np
 
+import cf_units
 import iris
 
 from constants import SPECIFIC_HEAT_CONSTANT_PRESSURE as CP
@@ -61,7 +62,7 @@ def svp(ta):
     svp_data = c1 * np.exp(a1*ta_data/(b1+ta_data))
     if is_cube:
         svp_cube = ta.copy(data=svp_data)
-        svp_cube.units = iris.unit.Unit('Pa')
+        svp_cube.units = cf_units.Unit('Pa')
         svp_cube.rename('water_vapor_partial_pressure_in_air')
         return svp_cube
     else:

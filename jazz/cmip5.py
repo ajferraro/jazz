@@ -322,7 +322,7 @@ def fetch(location, constraint=None):
         iris.util.unify_time_units(cubes)
         from iris.experimental.equalise_cubes import equalise_attributes
         equalise_attributes(cubes)
-        coord_names = [coord.standard_name for coord in cubes[0].coords()]
+        coord_names = [coord.standard_name for coord in cubes[0].dim_coords]
         if 'time' in coord_names:
             cubes = check_realizations_timepoint_duplicates(cubes)
         if 'air_pressure' in coord_names:
