@@ -2,6 +2,7 @@ import inspect
 import numpy as np
 import os
 from scipy import stats
+import sys
 import datetime
 import warnings
 
@@ -293,6 +294,10 @@ def gen_timestring(cube):
     date_end = calendar[-1]
     return '-'.join([str(date_start.year)+str(date_start.month).zfill(2),
                      str(date_end.year)+str(date_end.month).zfill(2)])
+
+def get_script_path():
+    """Get the path of the running script."""
+    return os.path.dirname(os.path.realpath(sys.argv[0]))
 
 
 def loop_dictionary(dictionary, function, *args):
