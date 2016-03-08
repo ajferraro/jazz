@@ -4,6 +4,7 @@ Module for handling CMIP5 files
 import glob
 import itertools
 import numpy as np
+from scipy import interpolate
 import os
 import warnings
 
@@ -294,7 +295,35 @@ def ensure_time_axis(cubes):
     return new_list
 
 
-def fetch(location, constraint=None):
+def fix_coords(cubes):
+
+    all_time = [c.coord('time').points for c in cubes]
+    for i, time_list in enumerate(all_time):
+        time_array = np.array(time_list)
+        x_ref = np.arange(len(time_array))
+        wrong = np.where(time_array < 1)[0]
+        if len(wrong) > 0:
+            time_array[wrong] = np.nan
+            ydata = time_array[~np.isnan(time_array)]
+            xdata = x_ref[~np.isnan(time_array)]
+            spline = interpolate.InterpolatedUnivariateSpline(xdata, ydata, k=1)
+            for w in wrong:
+                time_array[w] = spline(w)
+            cubes[i].coord('time').points = time_array
+            cubes[i].coord('time').bounds = None
+            cubes[i].coord('time').guess_bounds()
+
+    COORD_NAMES = ['air_pressure', 'latitude', 'longitude']
+    for coord_name in COORD_NAMES:
+        for c in cubes:
+            if not c.coord(coord_name) in c.dim_coords:
+                dim = c.coord_dims(coord_name)[0]
+                c.remove_coord(coord_name)
+                c.add_dim_coord(cubes[0].coord(coord_name), dim)
+
+
+
+def fetch(location, constraint=None, cheat_with_coordinates=True):
     """Fetch data from a netCDF or a directory containing netCDFs using iris.
     A common cause of concatenate errors is when the time data aren't
     contiguous. This is checked for and corrected.
@@ -314,6 +343,9 @@ def fetch(location, constraint=None):
     var_name = location.split('/')[-2]
     cubes = cubes.extract(iris.Constraint(cube_func=lambda cube:
                                           cube.var_name == var_name))
+
+    if cheat_with_coordinates:
+        fix_coords(cubes)
 
     if len(cubes) == 1:
         cube = cubes[0]
