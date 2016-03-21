@@ -101,17 +101,20 @@ def area_weighted(cube):
     return outcube
 
 
-def climatology(cube):
-    """Calculate a monthly climatology for a cube.
+def climatology(cube, kind='month'):
+    """Calculate a climatology for a cube.  Can do monthly or yearly.
 
     Args:
         cube (iris.cube.Cube)
+        kind (Optional[str]): 'month' or 'year'
 
     Returns:
         iris.cube.Cube
 
     """
     aux_coords = [aux_coord.name() for aux_coord in cube.aux_coords]
+    if 'year' not in aux_coords:
+        cat.add_year(cube, 'time')
     if 'month' not in aux_coords:
         cat.add_month(cube, 'time')
     return cube.aggregated_by(kind, iris.analysis.MEAN)
