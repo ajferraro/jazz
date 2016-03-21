@@ -323,7 +323,7 @@ def fix_coords(cubes):
 
 
 
-def fetch(location, constraint=None, cheat_with_coordinates=True):
+def fetch(location, constraint=None, cheat_with_coordinates=False):
     """Fetch data from a netCDF or a directory containing netCDFs using iris.
     A common cause of concatenate errors is when the time data aren't
     contiguous. This is checked for and corrected.
