@@ -117,6 +117,8 @@ def climatology(cube, kind='month'):
         cat.add_year(cube, 'time')
     if 'month' not in aux_coords:
         cat.add_month(cube, 'time')
+    if cube.coord('time') not in cube.dim_coords:
+        iris.util.promote_aux_coord_to_dim_coord(cube, 'time')
     return cube.aggregated_by(kind, iris.analysis.MEAN)
 
 
