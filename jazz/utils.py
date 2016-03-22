@@ -279,19 +279,20 @@ def detrend_array(data, axis=0):
     return ret
 
 
-def gen_timestring(cube):
+def gen_timestring(cube, coord_name='time'):
     """Generate a string describing time range covered by a cube.
 
     Args:
-        cube (iris.Cube)
+        cube (iris.Cube): cube for which to generate a time string.
+        coord_name (Optional[str]): name of the time coordinate.
 
     Returns:
         str
 
     """
-    calendar = cube.coord('time').units.num2date(cube.coord('time').points)
-    date_start = calendar[0]
-    date_end = calendar[-1]
+    cal = cube.coord(coord_name).units.num2date(cube.coord(coord_name).points)
+    date_start = cal[0]
+    date_end = cal[-1]
     return '-'.join([str(date_start.year)+str(date_start.month).zfill(2),
                      str(date_end.year)+str(date_end.month).zfill(2)])
 
