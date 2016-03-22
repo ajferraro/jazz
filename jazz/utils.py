@@ -318,20 +318,18 @@ def loop_dictionary(dictionary, function, *args):
     return dictionary
 
 
-def make_common_in_time(*args, time_coord_name='time'):
+def make_common_in_time(*args):
     """Subet all cubes so they have the same time dimensions.
 
     Args:
         *args (iris.Cube)
-        time_coord_name (Optional[str]): name of the time coordinate
 
     Returns:
         list
 
     """
     # Get the calendar arrays for all cubes
-    calendars = [cube.coord(time_coord_name).units.
-                 num2date(cube.coord(time_coord_name).points)
+    calendars = [cube.coord('time').units.num2date(cube.coord('time').points)
                  for cube in args]
     # Make all days 16 - we don't care for monthly data but we need to
     # make it consistent for the subsequent comparisons
