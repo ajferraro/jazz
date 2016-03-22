@@ -48,9 +48,11 @@ def anomalies(cube, kind='month'):
     clim_data = np.repeat(clim_data, nrepeats, axis=time_axis)
     clim_data = clim_data.reshape(clim_data.shape[0]*clim_data.shape[1],
                                   clim_data.shape[2], clim_data.shape[3])
+    nextras = cube.shape[time_axis]-clim_data.shape[time_axis]
     clim_data = np.append(clim_data, clim.data[0:nextras], axis=time_axis)
 
-    return cube.copy(data=cube.data-clim_data)
+    return cube.copy(data=np.ma.masked_array(cube.data-clim_data,
+                                             mask=cube.data.mask))
 
 
 def annual_mean(cube):
