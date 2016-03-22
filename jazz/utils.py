@@ -6,6 +6,7 @@ import sys
 import datetime
 import warnings
 
+import netcdftime
 import iris
 import iris.coord_categorisation as cat
 
@@ -44,8 +45,10 @@ def anomalies(cube, kind='month'):
     # Find out where the time axis is
     time_axis = coord_name_tuple.index('time')
     clim_data = np.expand_dims(clim.data, time_axis)
-    clim_data = np.repeat(clim_data, nrepeats,
-                          axis=time_axis).reshape(cube.shape)
+    clim_data = np.repeat(clim_data, nrepeats, axis=time_axis)
+    clim_data = clim_data.reshape(clim_data.shape[0]*clim_data.shape[1],
+                                  clim_data.shape[2], clim_data.shape[3])
+    clim_data = np.append(clim_data, clim.data[0:nextras], axis=time_axis)
 
     return cube.copy(data=cube.data-clim_data)
 
@@ -117,8 +120,32 @@ def climatology(cube, kind='month'):
         cat.add_year(cube, 'time')
     if 'month' not in aux_coords:
         cat.add_month(cube, 'time')
-    return cube.aggregated_by(kind, iris.analysis.MEAN)
+        cat.add_month_number(cube, 'time')
+    out = cube.aggregated_by(kind, iris.analysis.MEAN)
 
+    # If the data don't start in January the time coordinate will no longer
+    # be monotonic. Fix this.
+    if (kind == 'month') and (not out.coord('time').is_monotonic()):
+
+        # Reorder the data so January is first.
+        jan_index = np.where(out.coord('month').points == 'Jan')[0][0]
+        ntim = 12
+        sort_indices = range(jan_index, ntim) + range(0, jan_index)
+        out = out[sort_indices]
+
+        # Create a new time coordinate which is monotonic.
+        startyear = int(out.coord('time').units.num2date(0).year)
+        newtime_points = [netcdftime.datetime(startyear + (m / 12), (m % 12) + 1, 1)
+                          for m in out.coord('month_number').points.astype(int)-1]
+        time_units = out.coord('time').units
+        newtime_points = time_units.date2num(newtime_points)
+        newtime = iris.coords.DimCoord(newtime_points, units=time_units,
+                                       standard_name='time')
+        data_dim = out.coord_dims('time')[0]
+        out.remove_coord('time')
+        out.add_dim_coord(newtime, data_dim)
+
+    return out
 
 def common_grid(ref_index, *args):
     """Put all supplied cubes on a common horizontal grid.
