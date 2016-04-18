@@ -158,7 +158,7 @@ def virtual_temperature(ta, mr):
     return ta*(mr+EPSILON)/(EPSILON*(1+mr))
 
 
-def shmr(sat_vapour_pres, pres):
+def calc_shmr(sat_vapour_pres, pres):
     """Calculate saturation humidity mixing ratio using Equation 3.63 of
     Wallace and Hobbs (2008).
 
@@ -187,3 +187,26 @@ def potential_temperature(ta, pres, pres_ref=1E5):
 
     """
     return ta*(pres_ref/pres)**(RD/CP)
+
+
+def calc_dewpoint(ta, hurs):
+    A = 17.625
+    B = iris.cube.Cube(243.04, units='degrees_Celsius')
+
+    ta_celsius = ta.copy()
+    ta_celsius.convert_units('degrees_Celsius')
+    print ta_celsius.units
+    loghurs = hurs.copy(data=np.log(hurs.data))
+    numerator = (loghurs + (A*ta_celsius)/(B.data+ta_celsius)) * B
+    denominator = A + -1*loghurs + -1*(A*ta_celsius)/(B.data+ta_celsius)
+    print numerator.units
+    print denominator.units
+    td = numerator/denominator
+    td.convert_units('Kelvin')
+    return td
+
+
+def lcl(ts, ps, hurs):
+    mrsat = calc_shmr(svp(ts), ps)
+    mr = hurs*mrsat
+    td = calc_dewpoint()

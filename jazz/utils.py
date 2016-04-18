@@ -36,14 +36,18 @@ def anomalies(cube, kind='month'):
     # Calculate climatology
     clim = climatology(cube, kind=kind)
 
+    # Rearrange climatology to match start month of the cube.
+    start_month = cube.coord('month_number').points[0]
+    sort_indices = range(start_month-1, 12) + range(0, start_month-1)
+    clim = clim[sort_indices]
+
     # Repeat the climatology in time so it can be subtracted from the cube
     ntim_clim = clim.coord('time').points.shape[0]
     ntim_cube = cube.coord('time').points.shape[0]
     nrepeats = ntim_cube/ntim_clim
-    coord_name_tuple = [coord.name() for coord in clim.dim_coords]
 
     # Find out where the time axis is
-    time_axis = coord_name_tuple.index('time')
+    time_axis = clim.coord_dims('time')[0]
     clim_data = np.expand_dims(clim.data, time_axis)
     clim_data = np.repeat(clim_data, nrepeats, axis=time_axis)
     clim_data = clim_data.reshape(clim_data.shape[0]*clim_data.shape[1],
@@ -51,8 +55,7 @@ def anomalies(cube, kind='month'):
     nextras = cube.shape[time_axis]-clim_data.shape[time_axis]
     clim_data = np.append(clim_data, clim.data[0:nextras], axis=time_axis)
 
-    return cube.copy(data=np.ma.masked_array(cube.data-clim_data,
-                                             mask=cube.data.mask))
+    return cube.copy(data=cube.data-clim_data)
 
 
 def annual_mean(cube):

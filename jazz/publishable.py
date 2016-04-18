@@ -12,7 +12,7 @@ def plot_styling(mode='jazz_paper'):
         print 'No style sheet available'
 
 
-def label_subplots(ax, case='lower', xpos=0, ypos=1.05, **kwargs):
+def label_subplots(ax, case='lower', **kwargs):
     """Put letter labels at top right corner of subplots.
 
     Args:
@@ -27,8 +27,7 @@ def label_subplots(ax, case='lower', xpos=0, ypos=1.05, **kwargs):
         labels = list(string.ascii_lowercase)[0:n_axes]
 
     for i, axes in enumerate(ax.flat):
-        axes.text(xpos, ypos, labels[i], fontdict=kwargs,
-                  transform=axes.transAxes)
+        axes.set_title(labels[i], fontdict=kwargs, loc='left')
 
 
 def save(path, exts=['png'], close=True, verbose=True):
