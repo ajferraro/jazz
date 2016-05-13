@@ -336,13 +336,13 @@ def fetch(location, constraint=None, cheat_with_coordinates=False):
         iris.Cube
 
     """
-    # Check if the supplied location is a single file or a directory
-    cubes = iris.load(location, constraint, callback=clean)
-
     # Extract only the data, not the ancillary cubes
     var_name = location.split('/')[-2]
-    cubes = cubes.extract(iris.Constraint(cube_func=lambda cube:
-                                          cube.var_name == var_name))
+    name_constraint = iris.Constraint(cube_func=lambda cube:
+                                      cube.var_name == var_name)
+
+    # Check if the supplied location is a single file or a directory
+    cubes = iris.load(location, constraint & name_constraint, callback=clean)
 
     if cheat_with_coordinates:
         fix_coords(cubes)
